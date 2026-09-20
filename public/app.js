@@ -1,13 +1,13 @@
 const $ = (id) => document.getElementById(id);
 const samples = {
-  thanks: ['いつも安定していて助かります。ありがとうございます！', ''],
-  sarcasm: ['また障害ですか。さすが、安定していますね。', '今週3回目のサービス障害が発生した直後。'],
-  urgent: ['決済が止まって売上が発生していません。今すぐ調査してください！', '本番サービスで障害が進行中。'],
-  ambiguous: ['さすがですね。', '']
+  thanks: 'いつも安定していて助かります。ありがとうございます！',
+  sarcasm: 'また障害ですか。さすが、安定していますね。',
+  urgent: '決済が止まって売上が発生していません。今すぐ調査してください！',
+  ambiguous: 'さすがですね。'
 };
 const history = [];
 document.querySelectorAll('[data-sample]').forEach((button) => button.addEventListener('click', () => {
-  [$('message').value, $('context').value] = samples[button.dataset.sample];
+  $('message').value = samples[button.dataset.sample];
   $('message').focus();
 }));
 function element(tag, text, className) {
@@ -31,7 +31,7 @@ function card(title, value, description, probabilities) {
 $('form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if ($('submit').disabled) return;
-  const input = { message: $('message').value.trim(), context: $('context').value.trim() };
+  const input = { message: $('message').value.trim() };
   if (!input.message) { $('status').textContent = '文章を入力してください。'; return; }
   $('submit').disabled = true;
   $('submit').textContent = 'Jev が判断しています…';
@@ -42,23 +42,29 @@ $('form').addEventListener('submit', async (event) => {
     const response = await fetch('/api/evaluate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'リクエストに失敗しました。');
-    const { sarcasm, intent, urgency } = data.answers;
+    const { sarcasm, intent, urgency } = data.response.answers;
     $('answers').append(
       card('NOUL / 皮肉を含む確率', `${(sarcasm.noul * 100).toFixed(1)}%`, 'Yes の確率です。皮肉の強さではありません。'),
       card('CHOICE / 発言の主な意図', intent.choice, `確信度 ${(intent.confidence * 100).toFixed(1)}% · 各選択肢の確率`, intent.probabilities),
       card('SCORE / 対応の緊急度', `${urgency.score.toFixed(2)} / 2`, `0：急がない · 1：期限あり · 2：即時対応 ／ 確信度 ${(urgency.confidence * 100).toFixed(1)}%`)
     );
-    const details = element('details');
-    details.append(element('summary', '送信内容と API レスポンスを見る'), element('pre', JSON.stringify({ input, response: data }, null, 2)));
-    $('answers').append(details);
+    for (const [title, value] of [
+      ['Raw request · POST /v1/systemone', data.request],
+      ['Raw response · TypeSafe API', data.response]
+    ]) {
+      const details = element('details');
+      details.open = true;
+      details.append(element('summary', title), element('pre', JSON.stringify(value, null, 2)));
+      $('answers').append(details);
+    }
     $('status').textContent = `「${input.message.slice(0, 65)}${input.message.length > 65 ? '…' : ''}」の結果`;
-    $('timing').textContent = `${data.model} · ${(data.elapsedMs / 1000).toFixed(2)}s`;
+    $('timing').textContent = `${data.response.model} · ${(data.elapsedMs / 1000).toFixed(2)}s`;
     history.unshift({ input, label: `${input.message.slice(0, 45)}\n皮肉 ${(sarcasm.noul * 100).toFixed(1)}% · ${intent.choice} · 緊急度 ${urgency.score.toFixed(2)}` });
     history.splice(5); $('history').replaceChildren(); $('history-section').hidden = false;
     for (const entry of history) {
       const button = element('button', entry.label, 'history-item');
       button.type = 'button';
-      button.addEventListener('click', () => { $('message').value = entry.input.message; $('context').value = entry.input.context; $('message').focus(); });
+      button.addEventListener('click', () => { $('message').value = entry.input.message; $('message').focus(); });
       $('history').append(button);
     }
   } catch (error) { $('status').className = 'error'; $('status').textContent = error.message; }

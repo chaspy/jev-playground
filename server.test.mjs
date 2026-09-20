@@ -27,7 +27,6 @@ test('local server validates requests and never serves secrets', async (t) => {
   assert.equal((await post('{')).status, 400);
   assert.equal((await post('null')).status, 400);
   assert.equal((await post('{"message":" "}')).status, 400);
-  assert.equal((await post('{"message":"hello","context":5}')).status, 400);
   assert.equal((await post(JSON.stringify({ message: 'a'.repeat(5001) }))).status, 400);
   assert.equal((await post('{}', { Origin: 'https://example.com' })).status, 403);
   assert.equal((await post('{}', { 'Content-Type': 'text/plain' })).status, 415);

@@ -5,12 +5,12 @@ const port = Number(process.env.PORT || 4321);
 const origin = `http://localhost:${port}`;
 const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
 const questions = {
-  sarcasm: { type: 'noul', instructions: '文脈を考慮して、message は皮肉を含んでいますか？' },
+  sarcasm: { type: 'noul', instructions: 'message は皮肉を含んでいますか？' },
   intent: { type: 'choice', instructions: 'message の主な意図を一つ選んでください。', criteria: {
     '質問': '情報や説明を求めている', '依頼': '何らかの行動を求めている',
     '感謝': '感謝や称賛を伝えている', '不満': '不満や批判を伝えている', 'その他': '上記に該当しない'
   } },
-  urgency: { type: 'score', instructions: '文脈を考慮して、message が伝える対応の緊急度を評価してください。',
+  urgency: { type: 'score', instructions: 'message が伝える対応の緊急度を評価してください。',
     criteria: ['対応を求めていない、または急ぐ必要がない', '期限はあるが即時対応までは求めていない', '今すぐの対応が必要、進行中の重大な支障がある'] }
 };
 function json(res, status, value) {
@@ -36,17 +36,18 @@ createServer(async (req, res) => {
     }
     let input;
     try { input = JSON.parse(body); } catch { return json(res, 400, { error: 'JSON が不正です。' }); }
-    if (!input || typeof input.message !== 'string' || !input.message.trim() || input.message.length > 5000 || (input.context !== undefined && (typeof input.context !== 'string' || input.context.length > 5000))) return json(res, 400, { error: '文章は1〜5000文字、文脈は5000文字以内で入力してください。' });
+    if (!input || typeof input.message !== 'string' || !input.message.trim() || input.message.length > 5000) return json(res, 400, { error: '文章は1〜5000文字で入力してください。' });
     if (!process.env.TYPESAFE_API_KEY) return json(res, 503, { error: '.env に TYPESAFE_API_KEY を設定してください。' });
+    const request = { model: 'jev-latest', state: { message: input.message }, questions };
     const start = performance.now();
     const upstream = await fetch('https://api.typesafe.ai/v1/systemone', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.TYPESAFE_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'jev-latest', state: { message: input.message, context: input.context || '' }, questions }),
+      body: JSON.stringify(request),
       signal: AbortSignal.timeout(60000)
     });
     if (!upstream.ok) return json(res, 502, { error: `TypeSafe API がエラーを返しました（HTTP ${upstream.status}）。キー・利用制限・サービス状況を確認してください。` });
     const result = await upstream.json();
-    return json(res, 200, { ...result, elapsedMs: Math.round(performance.now() - start) });
+    return json(res, 200, { request, response: result, elapsedMs: Math.round(performance.now() - start) });
   } catch (error) {
     return json(res, 502, { error: error.name === 'TimeoutError' ? '60秒でタイムアウトしました。' : '通信または処理に失敗しました。' });
   }
