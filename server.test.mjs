@@ -21,7 +21,7 @@ test('local server validates requests and never serves secrets', async (t) => {
   assert.equal(page.status, 200);
   assert.match(await page.text(), /Jev Playground/);
   assert.ok(page.headers.get('content-security-policy'));
-  for (const path of ['/.env', '/server.mjs', '/.git/config']) {
+  for (const path of ['/.env', '/server.mjs', '/.git/config', '/logs/api.jsonl']) {
     assert.equal((await fetch(base + path)).status, 404);
   }
   assert.equal((await post('{')).status, 400);

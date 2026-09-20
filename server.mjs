@@ -1,5 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { appendApiLog } from './api-log.mjs';
 
 const port = Number(process.env.PORT || 4321);
 const origin = `http://localhost:${port}`;
@@ -39,15 +41,33 @@ createServer(async (req, res) => {
     if (!input || typeof input.message !== 'string' || !input.message.trim() || input.message.length > 5000) return json(res, 400, { error: '文章は1〜5000文字で入力してください。' });
     if (!process.env.TYPESAFE_API_KEY) return json(res, 503, { error: '.env に TYPESAFE_API_KEY を設定してください。' });
     const request = { model: 'jev-latest', state: { message: input.message }, questions };
+    const log = { id: randomUUID(), timestamp: new Date().toISOString(), method: 'POST',
+      url: 'https://api.typesafe.ai/v1/systemone', request };
     const start = performance.now();
-    const upstream = await fetch('https://api.typesafe.ai/v1/systemone', {
+    let upstream;
+    let result;
+    try {
+      upstream = await fetch('https://api.typesafe.ai/v1/systemone', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.TYPESAFE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
       signal: AbortSignal.timeout(60000)
-    });
+      });
+      log.status = upstream.status;
+      const raw = await upstream.text();
+      try { result = JSON.parse(raw); } catch { result = raw; }
+      log.response = result;
+    } catch (error) {
+      log.error = error.name === 'TimeoutError' ? 'timeout' : 'connection_error';
+      throw error;
+    } finally {
+      log.elapsedMs = Math.round(performance.now() - start);
+      try { await appendApiLog(log); } catch {
+        console.error('Failed to write logs/api.jsonl');
+        return json(res, 500, { error: 'API のローカルログを保存できませんでした。logs ディレクトリの書き込み権限を確認してください。' });
+      }
+    }
     if (!upstream.ok) return json(res, 502, { error: `TypeSafe API がエラーを返しました（HTTP ${upstream.status}）。キー・利用制限・サービス状況を確認してください。` });
-    const result = await upstream.json();
-    return json(res, 200, { request, response: result, elapsedMs: Math.round(performance.now() - start) });
+    return json(res, 200, { request, response: result, elapsedMs: log.elapsedMs });
   } catch (error) {
     return json(res, 502, { error: error.name === 'TimeoutError' ? '60秒でタイムアウトしました。' : '通信または処理に失敗しました。' });
   }
