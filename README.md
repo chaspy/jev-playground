@@ -1,30 +1,16 @@
 # Jev Playground
 
-日本語の文章を入力して、Jev の3種類の判断を比較するローカル Web アプリ。
+Jev を使うローカルアプリの実験用リポジトリ。各アプリを `apps/<アプリ名>/` に分けます。
 
-- Noul：皮肉を含む確率
-- Choice：発言の主な意図と選択肢ごとの確率
-- Score：対応の緊急度（0〜2）
-- サンプル4件、直近5件のセッション内履歴、実際の API request（質問・判定基準を含む）と response の JSON 表示
+| アプリ | 内容 | 起動コマンド | URL |
+| --- | --- | --- | --- |
+| [utterance-playground](apps/utterance-playground/) | 発言の意図・皮肉を含む確率 | `npm run start:utterance` | http://localhost:4321 |
 
 Node.js 22 以上が必要です。外部パッケージのインストールは不要です。
+リポジトリルートの `.env` に `TYPESAFE_API_KEY=...` を設定し、ルートで起動コマンドを実行します。
+`npm start` でも発言の実験アプリを起動できます。`npm test` で全アプリのテストを実行します。
 
-1. `.env` に `TYPESAFE_API_KEY=...` を設定します（Git 管理対象外）。
-2. `npm start` を実行します。
-3. http://localhost:4321 を開きます。ポートは `.env` の `PORT` で変更できます。
-
-サンプルを選び「Jev に聞いてみる」を押してください。言い回しを
-変えると判断が変わるか試せます。実行ごとに外部の TypeSafe API に文章が
-送信され、API 利用量が発生します。キーはサーバー側だけで読み込みます。
-履歴はブラウザーのメモリーに保持し、リロードすると消えます。
-
-API 呼び出しは `logs/api.jsonl` に1実行1行の JSON として追記します。
-日時・実行 ID・request（文章と質問）・response・HTTP ステータス・所要時間を記録し、
-通信失敗時もエラー種別を残します。API キーと認証ヘッダーは記録しません。
-ログは Git 管理対象外で、ブラウザーから取得できません。Codex はこのファイルを読んで
-過去の結果を確認できます。不要になったログは削除できます。導入前の実行は記録されません。
-
-`npm test` でローカル入力検証と非公開ファイルの保護を確認できます（API 呼び出しなし）。
-
-公式資料：[Getting Started](https://docs.typesafe.ai/introduction/quickstart)、
-[HTTP API](https://docs.typesafe.ai/api)。
+アプリ固有のサーバー・画面・テスト・README・ログを各ディレクトリに配置します。
+API キーはルートの `.env` を共用し、ログは各アプリの `logs/` に保存します。
+どちらも Git 管理対象外です。既存ログは `apps/utterance-playground/logs/api.jsonl` に移動済みです。
+新しいアプリを追加するときは別のポートと起動コマンドを割り当てます。

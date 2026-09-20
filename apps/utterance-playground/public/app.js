@@ -36,18 +36,32 @@ $('form').addEventListener('submit', async (event) => {
   $('submit').disabled = true;
   $('submit').textContent = 'Jev が判断しています…';
   $('status').className = '';
-  $('status').textContent = '3つの質問をまとめて送信中…';
+  $('status').textContent = '2つの質問をまとめて送信中…';
   $('answers').replaceChildren(); $('timing').textContent = '';
+  const startedAt = performance.now();
   try {
     const response = await fetch('/api/evaluate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
     const data = await response.json();
+    const totalMs = Math.round(performance.now() - startedAt);
     if (!response.ok) throw new Error(data.error || 'リクエストに失敗しました。');
-    const { sarcasm, intent, urgency } = data.response.answers;
+    const { sarcasm, intent } = data.response.answers;
     $('answers').append(
       card('NOUL / 皮肉を含む確率', `${(sarcasm.noul * 100).toFixed(1)}%`, 'Yes の確率です。皮肉の強さではありません。'),
-      card('CHOICE / 発言の主な意図', intent.choice, `確信度 ${(intent.confidence * 100).toFixed(1)}% · 各選択肢の確率`, intent.probabilities),
-      card('SCORE / 対応の緊急度', `${urgency.score.toFixed(2)} / 2`, `0：急がない · 1：期限あり · 2：即時対応 ／ 確信度 ${(urgency.confidence * 100).toFixed(1)}%`)
+      card('CHOICE / 発言の主な意図', intent.choice, `確信度 ${(intent.confidence * 100).toFixed(1)}% · 各選択肢の確率`, intent.probabilities)
     );
+    const metrics = element('section', undefined, 'metrics');
+    metrics.append(
+      element('h3', 'Response speed / Cost'),
+      element('p', `API 応答時間 ${data.elapsedMs.toLocaleString()} ms · 全体 ${totalMs.toLocaleString()} ms`),
+      element('p', data.cost ? `推定コスト $${data.cost.usd.toFixed(8)} USD` : '推定コスト：料金または使用量が不明'),
+      element('p', `入力 ${data.response.usage?.input_tokens ?? '不明'} tokens · 出力 ${data.response.usage?.output_tokens ?? '不明'} tokens`)
+    );
+    if (data.cost) {
+      const source = element('a', `入力 $${data.cost.inputUsdPerMillion} / 100万 tokens · 出力無料（${data.cost.checkedAt} 確認）`);
+      source.href = data.cost.source; source.target = '_blank'; source.rel = 'noreferrer';
+      metrics.append(source);
+    }
+    $('answers').append(metrics);
     for (const [title, value] of [
       ['Raw request · POST /v1/systemone', data.request],
       ['Raw response · TypeSafe API', data.response]
@@ -59,7 +73,7 @@ $('form').addEventListener('submit', async (event) => {
     }
     $('status').textContent = `「${input.message.slice(0, 65)}${input.message.length > 65 ? '…' : ''}」の結果`;
     $('timing').textContent = `${data.response.model} · ${(data.elapsedMs / 1000).toFixed(2)}s`;
-    history.unshift({ input, label: `${input.message.slice(0, 45)}\n皮肉 ${(sarcasm.noul * 100).toFixed(1)}% · ${intent.choice} · 緊急度 ${urgency.score.toFixed(2)}` });
+    history.unshift({ input, label: `${input.message.slice(0, 45)}\n皮肉 ${(sarcasm.noul * 100).toFixed(1)}% · ${intent.choice}` });
     history.splice(5); $('history').replaceChildren(); $('history-section').hidden = false;
     for (const entry of history) {
       const button = element('button', entry.label, 'history-item');

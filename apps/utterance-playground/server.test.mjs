@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { fileURLToPath } from 'node:url';
 
 test('local server validates requests and never serves secrets', async (t) => {
   const port = 14321;
-  const server = spawn(process.execPath, ['server.mjs'], {
+  const server = spawn(process.execPath, [fileURLToPath(new URL('./server.mjs', import.meta.url))], {
     env: { ...process.env, PORT: String(port), TYPESAFE_API_KEY: '' }, stdio: ['ignore', 'pipe', 'pipe']
   });
   t.after(() => server.kill());

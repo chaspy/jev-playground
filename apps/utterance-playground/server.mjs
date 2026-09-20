@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { appendApiLog } from './api-log.mjs';
+import { estimateCost } from './cost.mjs';
 
 const port = Number(process.env.PORT || 4321);
 const origin = `http://localhost:${port}`;
@@ -11,9 +12,7 @@ const questions = {
   intent: { type: 'choice', instructions: 'message の主な意図を一つ選んでください。', criteria: {
     '質問': '情報や説明を求めている', '依頼': '何らかの行動を求めている',
     '感謝': '感謝や称賛を伝えている', '不満': '不満や批判を伝えている', 'その他': '上記に該当しない'
-  } },
-  urgency: { type: 'score', instructions: 'message が伝える対応の緊急度を評価してください。',
-    criteria: ['対応を求めていない、または急ぐ必要がない', '期限はあるが即時対応までは求めていない', '今すぐの対応が必要、進行中の重大な支障がある'] }
+  } }
 };
 function json(res, status, value) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -56,6 +55,7 @@ createServer(async (req, res) => {
       const raw = await upstream.text();
       try { result = JSON.parse(raw); } catch { result = raw; }
       log.response = result;
+      log.cost = upstream.ok ? estimateCost(result) : null;
     } catch (error) {
       log.error = error.name === 'TimeoutError' ? 'timeout' : 'connection_error';
       throw error;
@@ -67,7 +67,7 @@ createServer(async (req, res) => {
       }
     }
     if (!upstream.ok) return json(res, 502, { error: `TypeSafe API がエラーを返しました（HTTP ${upstream.status}）。キー・利用制限・サービス状況を確認してください。` });
-    return json(res, 200, { request, response: result, elapsedMs: log.elapsedMs });
+    return json(res, 200, { request, response: result, elapsedMs: log.elapsedMs, cost: log.cost });
   } catch (error) {
     return json(res, 502, { error: error.name === 'TimeoutError' ? '60秒でタイムアウトしました。' : '通信または処理に失敗しました。' });
   }
