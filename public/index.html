@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Jev Playground</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><main>
+  <header><a href="/" class="brand">j<span>ev</span> / playground</a><span class="badge">LOCAL · SYSTEM ONE</span></header>
+  <section class="intro"><p class="eyebrow">SMALL QUESTIONS. INTERESTING ANSWERS.</p><h1>ことばの裏側を、<br>のぞいてみよう。</h1><p>一文を変える。文脈を足す。Jev の判断がどう変わるか、実験しよう。</p></section>
+  <div class="workspace"><section class="panel"><div class="section-title"><h2>01 / 入力する</h2><span>日本語でも、英語でも</span></div>
+    <div class="samples"><button type="button" data-sample="thanks">素直な感謝</button><button type="button" data-sample="sarcasm">皮肉っぽい一言</button><button type="button" data-sample="urgent">急ぎの依頼</button><button type="button" data-sample="ambiguous">曖昧な一言</button></div>
+    <form id="form"><label for="message">試したい文章</label><textarea id="message" maxlength="5000" required placeholder="例：また障害ですか。さすが、安定していますね。"></textarea><label for="context">文脈 <span>任意</span></label><textarea id="context" maxlength="5000" class="context" placeholder="例：今週3回目のサービス障害が発生した直後の発言。"></textarea><button id="submit" class="primary">Jev に聞いてみる ↗</button><p class="hint">実行ごとに TypeSafe API を呼び出します。⌘ / Ctrl + Enter でも実行。</p></form>
+  </section><section class="panel results"><div class="section-title"><h2>02 / 判断を観察する</h2><span id="timing"></span></div><p id="status" role="status" aria-live="polite">左のサンプルを選んで、最初の実験を。</p><div id="answers"></div></section></div>
+  <section id="history-section" hidden><h2>このセッションの実験</h2><p class="hint">直近5件。文章と文脈を戻して、言い回しを比べられます。</p><div id="history"></div></section>
+  <footer><span>Powered by Jev · TypeSafe</span><a href="https://docs.typesafe.ai/introduction/quickstart" target="_blank" rel="noreferrer">Getting Started ↗</a></footer>
+</main></body></html>
